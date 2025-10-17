@@ -1,0 +1,70 @@
+name: Deploy to Firebase
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    env:
+      FIREBASE_PROJECT: ${{ secrets.FIREBASE_PROJECT }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: Install dependencies (functions)
+        working-directory: ./functions
+        run: npm ci
+
+      - name: Install Firebase CLI
+        run: |
+          npm install -g firebase-tools@latest
+
+      - name: Authenticate to Firebase
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        run: |
+          if [ -z "$FIREBASE_TOKEN" ]; then
+            echo "FIREBASE_TOKEN is not set. Aborting." >&2
+            exit 1
+          fi
+          firebase projects:list --token "$FIREBASE_TOKEN" --format=json >/dev/null
+
+      - name: Set Functions runtime config (from GitHub Secrets)
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          PROJECT: ${{ secrets.FIREBASE_PROJECT }}
+          ALLOWED_HOSTS: ${{ secrets.PROXY_ALLOWED_HOSTS }}
+          PROXY_API_KEY: ${{ secrets.PROXY_API_KEY }}
+          PROXY_TIMEOUT_MS: ${{ secrets.PROXY_TIMEOUT_MS }}
+        run: |
+          if [ -z "$PROJECT" ]; then
+            echo "FIREBASE_PROJECT secret is not set. Aborting." >&2
+            exit 1
+          fi
+          CMD="firebase functions:config:set"
+          if [ -n "$ALLOWED_HOSTS" ]; then
+            CMD="$CMD proxy.allowed_hosts=\"$ALLOWED_HOSTS\""
+          fi
+          if [ -n "$PROXY_API_KEY" ]; then
+            CMD="$CMD proxy.api_key=\"$PROXY_API_KEY\""
+          fi
+          if [ -n "$PROXY_TIMEOUT_MS" ]; then
+            CMD="$CMD proxy.timeout_ms=\"$PROXY_TIMEOUT_MS\""
+          fi
+          $CMD --project "$PROJECT" --token "$FIREBASE_TOKEN"
+
+      - name: Deploy to Firebase (functions + hosting)
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          PROJECT: ${{ secrets.FIREBASE_PROJECT }}
+        run: |
+          firebase deploy --only functions,hosting --project "$PROJECT" --token "$FIREBASE_TOKEN"

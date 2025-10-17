@@ -13,7 +13,7 @@ app.use(cors()); // tighten origin in production
 
 // Helpers to get config from environment or functions config
 function getConfig() {
-  const envAllowed = process.env.ALLOWED_HOSTS;
+  const envAllowed = process.env.PROXY_ALLOWED_HOSTS || process.env.ALLOWED_HOSTS;
   const allowedFromConfig = (functions.config && functions.config().proxy && functions.config().proxy.allowed_hosts) || "";
   const allowed = (envAllowed || allowedFromConfig || "")
     .split(",")
@@ -24,7 +24,7 @@ function getConfig() {
   const apiKeyFromConfig = (functions.config && functions.config().proxy && functions.config().proxy.api_key) || "";
   const apiKey = envApiKey || apiKeyFromConfig || "";
 
-  // Optional timeout in ms
+  // Optional timeout in ms (default 30s)
   const timeout = parseInt(process.env.PROXY_TIMEOUT_MS || ((functions.config && functions.config().proxy && functions.config().proxy.timeout_ms) || ""), 10) || 30000;
 
   return { allowedHosts: allowed, apiKey, timeout };
