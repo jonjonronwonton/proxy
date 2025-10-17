@@ -1,0 +1,22 @@
+{
+  "name": "firebase-proxy-functions",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": "18"
+  },
+  "scripts": {
+    "lint": "eslint . || true",
+    "start": "firebase emulators:start --only functions",
+    "deploy": "firebase deploy --only functions"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "node-fetch": "^2.6.7",
+    "firebase-functions": "^4.4.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.46.0"
+  }
+}
